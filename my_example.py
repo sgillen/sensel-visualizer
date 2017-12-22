@@ -29,7 +29,7 @@
 
 #Sensel imports
 import sys
-sys.path.append('../../sensel-lib-wrappers/sensel-lib-python')
+sys.path.append('../sensel-api/sensel-lib-wrappers/sensel-lib-python')
 import sensel
 import binascii
 import threading
@@ -45,8 +45,10 @@ from matplotlib import cm
 import cv2
 
 
+enter_pressed = False
 
-enter_pressed = False;
+MAX_FORCE = 8192
+
 
 def waitForEnter():
     global enter_pressed
@@ -69,8 +71,6 @@ def initFrame():
 
 def scanFrames(frame, info):
     
-    
-
     error = sensel.readSensor(handle)
     (error, num_frames) = sensel.getNumAvailableFrames(handle)
     for i in range(num_frames):
@@ -87,19 +87,23 @@ def printFrame(frame, info):
 
 
 def drawFrame(frame, info):
-    Z = np.zeros((info.num_cols, info.num_rows))
+
+    Z = np.zeros((info.num_cols, info.num_rows), np.uint8)
     
     for i in range(info.num_cols):
         for j in range(info.num_rows):
-            Z[i,j] = frame.force_array[i*j]
+           Z[i,j] = round(frame.force_array[j*info.num_cols + i]*255/MAX_FORCE)
 
-    cv2.imshow('force image',Z)
+    
+
+           
+    im_color = cv2.applyColorMap(Z, cv2.COLORMAP_HOT)
+           
+    cv2.imshow('force image',im_color)
     cv2.waitKey(1)
  
             
-#    surf = ax.plot_surface(X, Y, Z)
-   
-    plt.pause(.05)
+    plt.pause(.01)
 
     
 def closeSensel(frame):
@@ -108,8 +112,8 @@ def closeSensel(frame):
     error = sensel.close(handle)
 
 
-        
 
+    
 handle = openSensel()
 
 if handle is None:
