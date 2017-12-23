@@ -88,30 +88,31 @@ def printFrame(frame, info):
 
 def drawFrame(frame, info):
 
-    Z = np.zeros((info.num_cols, info.num_rows), np.uint8)
+    Z = np.zeros((info.num_cols, info.num_rows))
     
     for i in range(info.num_cols):
         for j in range(info.num_rows):
-           Z[i,j] = round(frame.force_array[j*info.num_cols + i]*255/MAX_FORCE)
-
+            Z[i,j] = frame.force_array[j*info.num_cols + i]
+            #Z[i,j] = round(frame.force_array[j*info.num_cols + i]*255/MAX_FORCE)
+           
+    print np.amax(Z)
     
+   # im_color = cv2.applyColorMap(Z, cv2.COLORMAP_HOT)
 
-           
-    im_color = cv2.applyColorMap(Z, cv2.COLORMAP_HOT)
-           
+
+    im_color = cv2.resize(Z, (0,0), fx=4, fy=4)
+    
     cv2.imshow('force image',im_color)
     cv2.waitKey(1)
  
             
-    plt.pause(.01)
+    #plt.pause(.01)
 
     
 def closeSensel(frame):
     error = sensel.freeFrameData(handle, frame)
     error = sensel.stopScanning(handle)
     error = sensel.close(handle)
-
-
 
     
 handle = openSensel()
@@ -120,17 +121,6 @@ if handle is None:
     print "error opening sensor! exiting!"
     
 (error, info) = sensel.getSensorInfo(handle)
-
-X = np.arange(0, info.num_cols, 1)
-Y = np.arange(0, info.num_rows, 1)
-
-X, Y = np.meshgrid(Y, X)
-
-
-fig = plt.figure()
-
-ax = fig.gca(xlim = (0,info.num_cols), ylim = (0,info.num_rows), zlim = (0,500),projection='3d')
-plt.ion()
 
 frame = initFrame()
 
