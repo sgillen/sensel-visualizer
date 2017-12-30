@@ -40,6 +40,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
+import matplotlib.animation as animation
 
 #openCV imports
 import cv2
@@ -47,8 +48,8 @@ import cv2
 
 enter_pressed = False
 
-MAX_FORCE = 8192
-
+#MAX_FORCE = 8192 #This is allegedly the maximum allowable force
+MAX_FORCE = 500 # this is the maximum force I've seen in tests, when pushing very very hard
 
 def waitForEnter():
     global enter_pressed
@@ -69,52 +70,38 @@ def initFrame():
     error = sensel.startScanning(handle)
     return frame
 
-def scanFrames(frame, info):
+def scanFrames(dummy, frame, info):
+
     
     error = sensel.readSensor(handle)
     (error, num_frames) = sensel.getNumAvailableFrames(handle)
+
+    #get all the available frames from the device
     for i in range(num_frames):
         error = sensel.getFrame(handle, frame)
 
-    drawFrame(frame,info)
-        
 
-def printFrame(frame, info):
-    for i in range(info.num_rows):
-        print 
-        for j in range(info.num_cols):
-            print frame.force_array[i*j],
-
-
-def drawFrame(frame, info):
-
-    Z = np.zeros((info.num_cols, info.num_rows))
-    
+    #for the most recent frame ONLY, go through and extract the force array into a numpy array
     for i in range(info.num_cols):
         for j in range(info.num_rows):
-            Z[i,j] = frame.force_array[j*info.num_cols + i]
-            #Z[i,j] = round(frame.force_array[j*info.num_cols + i]*255/MAX_FORCE)
-           
-    print np.amax(Z)
+            force_image[i,j] = frame.force_array[j*info.num_cols + i]
+
     
-   # im_color = cv2.applyColorMap(Z, cv2.COLORMAP_HOT)
-
-
-    im_color = cv2.resize(Z, (0,0), fx=4, fy=4)
+    print np.amax(force_image)
     
-    cv2.imshow('force image',im_color)
-    cv2.waitKey(1)
- 
-            
-    #plt.pause(.01)
+    im.set_array(force_image)
+    print "im in scan frames", im
+    return [im]
 
+    
     
 def closeSensel(frame):
     error = sensel.freeFrameData(handle, frame)
     error = sensel.stopScanning(handle)
     error = sensel.close(handle)
 
-    
+
+
 handle = openSensel()
 
 if handle is None:
@@ -124,17 +111,28 @@ if handle is None:
 
 frame = initFrame()
 
-enter_thread = threading.Thread(target=waitForEnter)
+force_image = np.zeros((info.num_cols, info.num_rows))
+
+fig = plt.figure()
+
+im = plt.imshow(force_image, animated=True, vmin=0, vmax=12.5)
+
+# Set up formatting for the movie files
+Writer = animation.writers['ffmpeg']
+writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+
+#enter_thread = threading.Thread(target=waitForEnter)
 #sensel_thread = threading.Thread(target=scanFrames, args = (frame, info)) #this is going to cause problems
 
-enter_thread.start()
+#enter_thread.start()
 #sensel_thread.start()
 
-while(enter_pressed == False):
-    scanFrames(frame, info)
+# while(enter_pressed == False):
+
+ani = animation.FuncAnimation(fig, scanFrames , fargs = (frame,info), interval=50, blit=True)
+plt.show()
+
+ani.save('im.mp4', writer=writer)
+
 
 closeSensel(frame)
-        
-
-
-    
