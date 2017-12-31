@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 
-
-#sgillen: you'll need to install the sensel API to run this program (https://github.com/sensel/sensel-api)
-#started with the sensel API example 3, modified it to what you see now, this program visualizes and saves the raw force data coming from the sensel device
-
-
 ##########################################################################
 # MIT License
 #
@@ -28,6 +23,15 @@
 ##########################################################################
 
 
+
+#sgillen: you'll need to install the sensel API to run this program (https://github.com/sensel/sensel-api)
+#once you have that installed simply call "python visualizer.py" and follow the prompts
+#if you want to mess around with how sensitive the visualizer is change the MAX_FORCE variable defined right after all the imports
+
+
+#started with the sensel API example 3, modified it to what you see now, this program visualizes and saves the raw force data coming from the sensel device
+#there is some code to save the data as a numpy array or .mat file but it is commented out right now as these files tend to be rather large
+
 #imports
 #==============================================================================
 
@@ -45,6 +49,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 import matplotlib.animation as animation
+import scipy.io
 
 #define some global variables
 #==============================================================================
@@ -165,15 +170,16 @@ if __name__ == '__main__':
         ani = animation.FuncAnimation(fig, saveFrames, frames=len(force_image_list), interval=50, blit=True)
         ani.save(file_name + ".mp4" , writer=writer)
 
-        #save the csv file, this was written so that numpy.loadtxt can read this in, you may need to modify it to have it play nice with matlab or excel
-        with file(file_name + ".csv" , 'w') as outfile:
-            outfile.write('# Array length: {0}\n'.format(len(force_image_list)))
-            
-            for slice_2d in force_image_list:
-                np.savetxt(outfile, slice_2d)
-                outfile.write('# New slice\n')
-                
 
+        # #this copies our list of force images into a 3d array (so we can save an load it more naturally)
+        # force_image_3d = np.array(force_image_list)
+        
+        # #this will save the output as a numpy array
+        # np.save(file_name + ".npy", force_image_3d)
+
+        # #this will save this output as .mat file (for use with matlab)
+        # scipy.io.savemat(file_name + ".mat" , mdict={'sensel_data': force_image_3d})
+        
     #close up
     closeSensel(frame)
     print "all done, the sensel is closed"    
