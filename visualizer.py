@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 
-#sgillen: started with the sensel API example 3
+#sgillen: you'll need to install the sensel API to run this program (https://github.com/sensel/sensel-api)
+
+#started with the sensel API example 3, modifed it to what you see now, this program visualizes and saves the raw force data coming from the sensel device
 
 
 
@@ -55,8 +57,6 @@ MAX_FORCE = 12.5 # this is what I've found makes the animations look nice
 force_image_list = []
 
 
-
-
 def waitForEnter():
     global enter_pressed
     raw_input("Press Enter to exit...")
@@ -86,6 +86,7 @@ def closeSensel(frame):
 def scanFrames(dummy, frame, info):
 
     global force_image_list
+    force_image = np.zeros((info.num_cols, info.num_rows))
     
     error = sensel.readSensor(handle)
     (error, num_frames) = sensel.getNumAvailableFrames(handle)
@@ -119,6 +120,10 @@ def saveFrames(i):
 
 if __name__ == '__main__':    
     
+
+    file_name = raw_input("Enter a filename to save this session under (for example typing in movie will result in movie.mp4 and movie.csv files)\nleave this blank if you don't want to save anything \n")
+    
+    
     
     handle = openSensel()
 
@@ -136,12 +141,30 @@ if __name__ == '__main__':
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
+    print "sensel is open and streaming data, click the x in figure one to quit and save data"
     
     ani = animation.FuncAnimation(fig, scanFrames , fargs = (frame,info), interval=50, blit=True)
-
     plt.show()
 
-    ani = animation.FuncAnimation(fig, saveFrames, frames=len(force_image_list), interval=50, blit=True)
-    ani.save('im.mp4', writer=writer)
+    
+    if file_name:
         
+        print "saving session"
+        
+        ani = animation.FuncAnimation(fig, saveFrames, frames=len(force_image_list), interval=50, blit=True)
+        ani.save(file_name + ".mp4" , writer=writer)
+
+        with file(file_name + ".csv" , 'w') as outfile:
+            for slice_2d in force_image_list:
+                np.savetxt(outfile, slice_2d)
+        
+        # force_array_3d = np.array(force_image_list)
+        # print force_array_3d
+        # np.savetxt(file_name + ".csv", force_array_3d, delimiter=",", fmt = "%10.5f")
+        
+
+
     closeSensel(frame)
+    print "all done, the sensel is closed"    
+
+    
