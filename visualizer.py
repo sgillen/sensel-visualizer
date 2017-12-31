@@ -36,20 +36,26 @@ import threading
 import time
 
 #matplotlib/numpy imports
-from mpl_toolkits.mplot3d import Axes3D
+#from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 import matplotlib.animation as animation
 
-#openCV imports
-import cv2
 
+#define some global variables
 
-enter_pressed = False
+#MAX_FORCE is a constant you can tweak to change how sensitive the visualizer is.
 
 #MAX_FORCE = 8192 #This is allegedly the maximum allowable force
-MAX_FORCE = 500 # this is the maximum force I've seen in tests, when pushing very very hard
+#MAX_FORCE = 500 # this is the maximum force I've seen in tests, when pushing very very hard
+MAX_FORCE = 12.5 # this is what I've found makes the animations look nice
+
+
+force_image_list = []
+
+
+
 
 def waitForEnter():
     global enter_pressed
@@ -70,8 +76,16 @@ def initFrame():
     error = sensel.startScanning(handle)
     return frame
 
+    
+def closeSensel(frame):
+    error = sensel.freeFrameData(handle, frame)
+    error = sensel.stopScanning(handle)
+    error = sensel.close(handle)
+
+
 def scanFrames(dummy, frame, info):
 
+    global force_image_list
     
     error = sensel.readSensor(handle)
     (error, num_frames) = sensel.getNumAvailableFrames(handle)
@@ -86,53 +100,48 @@ def scanFrames(dummy, frame, info):
         for j in range(info.num_rows):
             force_image[i,j] = frame.force_array[j*info.num_cols + i]
 
+
+    force_image_list.append(np.copy(force_image))
     
-    print np.amax(force_image)
+#    print np.amax(force_image)
     
     im.set_array(force_image)
-    print "im in scan frames", im
+ 
     return [im]
 
+
+def saveFrames(i):
+    im.set_array(force_image_list[i])
+    return [im]
     
     
-def closeSensel(frame):
-    error = sensel.freeFrameData(handle, frame)
-    error = sensel.stopScanning(handle)
-    error = sensel.close(handle)
 
 
-
-handle = openSensel()
-
-if handle is None:
-    print "error opening sensor! exiting!"
+if __name__ == '__main__':    
     
-(error, info) = sensel.getSensorInfo(handle)
+    
+    handle = openSensel()
 
-frame = initFrame()
+    if handle is None:
+        print "error opening sensor! exiting!"
+    
+    (error, info) = sensel.getSensorInfo(handle)
+        
+    frame = initFrame()
 
-force_image = np.zeros((info.num_cols, info.num_rows))
+    fig = plt.figure()
+    im = plt.imshow(np.zeros((info.num_cols, info.num_rows)), animated=True, vmin=0, vmax=MAX_FORCE)
 
-fig = plt.figure()
+    # Set up formatting for the movie files
+    Writer = animation.writers['ffmpeg']
+    writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
-im = plt.imshow(force_image, animated=True, vmin=0, vmax=12.5)
+    
+    ani = animation.FuncAnimation(fig, scanFrames , fargs = (frame,info), interval=50, blit=True)
 
-# Set up formatting for the movie files
-Writer = animation.writers['ffmpeg']
-writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+    plt.show()
 
-#enter_thread = threading.Thread(target=waitForEnter)
-#sensel_thread = threading.Thread(target=scanFrames, args = (frame, info)) #this is going to cause problems
-
-#enter_thread.start()
-#sensel_thread.start()
-
-# while(enter_pressed == False):
-
-ani = animation.FuncAnimation(fig, scanFrames , fargs = (frame,info), interval=50, blit=True)
-plt.show()
-
-ani.save('im.mp4', writer=writer)
-
-
-closeSensel(frame)
+    ani = animation.FuncAnimation(fig, saveFrames, frames=len(force_image_list), interval=50, blit=True)
+    ani.save('im.mp4', writer=writer)
+        
+    closeSensel(frame)
