@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 
-#sgillen@20174216-12:42
-# my modifications of sensels example 3
+#sgillen: started with the sensel API example 3
+
 
 
 ##########################################################################
